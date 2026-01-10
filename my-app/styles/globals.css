@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Prompt', sans-serif;
+  background: radial-gradient(circle at top right, #334155, #0f172a); /* ไล่สีน้ำเงินเทา */
+  color: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Glassmorphism Classes */
+.glass-card {
+  background: rgba(30, 41, 59, 0.4); /* สีน้ำเงินเทาโปร่งแสง */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.input-luxury {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.input-luxury:focus {
+  border-color: #60a5fa; /* สีฟ้าสว่างตอนกด */
+  box-shadow: 0 0 15px rgba(96, 165, 250, 0.2);
+  outline: none;
+}
+/* อนิเมชันนาฬิกาทรายหมุนกลับไปกลับมา */
+@keyframes hourglass-flip {
+  0% { transform: rotate(0deg); }
+  45% { transform: rotate(180deg); }
+  55% { transform: rotate(180deg); } /* หยุดแป๊บนึง */
+  100% { transform: rotate(360deg); }
+}
+
+.hourglass-spin {
+  animation: hourglass-flip 3s infinite ease-in-out;
+}
+
+/* ธีมปุ่ม Luxury Slide */
+.btn-luxury-slide {
+  @apply relative overflow-hidden text-white font-medium rounded-lg shadow-lg transition-all duration-300;
+  background: linear-gradient(90deg, #2563eb, #1e40af);
+}
+
+/* ปุ่ม Luxury Slide Effect (ขวา -> ซ้าย) */
+.btn-luxury-slide {
+  @apply relative overflow-hidden text-white font-medium rounded-lg shadow-lg transition-all duration-300;
+  /* สีพื้นหลังปกติ (ก่อน Hover) */
+  background: linear-gradient(90deg, #2563eb, #1e40af); /* Blue-600 to Blue-800 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-luxury-slide::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  
+  /* สีของม่านที่เลื่อนมาทับ (ไล่สีฟ้าสว่างให้ดูมีมิติ) */
+  background: linear-gradient(90deg, #0ea5e9, #3b82f6); /* Sky-500 to Blue-500 */
+  
+  /* จุดสำคัญ: เริ่มต้นโดยการผลักไปทางขวาสุด (100%) */
+  transform: translateX(100%);
+  
+  /* ความสมูธ (Bezier Curve ทำให้ดูแพง ไม่แข็งทื่อ) */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0; /* อยู่ข้างหลังตัวหนังสือ */
+}
+
+.btn-luxury-slide:hover::before {
+  /* เมื่อเอาเมาส์ชี้ ให้เลื่อนกลับมาที่เดิม (0%) */
+  transform: translateX(0);
+}
+
+.btn-luxury-slide:hover {
+  /* เพิ่มเงาแสงสีฟ้าให้ปุ่มดูเรืองแสงนิดๆ */
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px); /* ลอยขึ้นนิดนึง */
+}
+
+/* บังคับให้ตัวหนังสือลอยเหนือพื้นหลังที่เลื่อนมา */
+.btn-luxury-slide span {
+  position: relative;
+  z-index: 1;
+}
