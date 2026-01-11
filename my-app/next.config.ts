@@ -1,11 +1,16 @@
 import type { NextConfig } from "next";
+import path from "path"; // 1. อย่าลืม import path
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  typescript: {
-    ignoreBuildErrors: true, // ยังใช้ได้อยู่
+  // 2. ใส่ config ส่วนนี้เพิ่มเข้าไปครับ
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+    };
+    return config;
   },
-  // ลบส่วน eslint ออกไปเลยครับ เพราะ Next.js 16 ไม่รองรับคีย์นี้ในไฟล์นี้แล้ว
 };
 
 export default nextConfig;
