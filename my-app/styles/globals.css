@@ -93,3 +93,56 @@ body {
   position: relative;
   z-index: 1;
 }
+/* --- styles/globals.css --- */
+
+/* Luxury Button Style (พี่มีแล้ว แต่อันนี้เผื่อไว้) */
+.btn-luxury-slide {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #2563eb, #1e40af);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+.btn-luxury-slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1e40af, #2563eb);
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+.btn-luxury-slide:hover::before {
+  opacity: 1;
+}
+
+/* 🔥 Luxury Page Transition (ปาดหน้าจอแบบไล่สี) */
+.page-transition-enter {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  background: linear-gradient(to left, #1e3a8a, #3b82f6, #60a5fa); /* ไล่สีน้ำเงิน Luxury */
+  transform: translateX(100%); /* เริ่มจากขวาสุด */
+  pointer-events: none;
+}
+
+.page-transition-active {
+  animation: wipe-screen 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes wipe-screen {
+  0% { transform: translateX(100%); }   /* อยู่ขวา */
+  40% { transform: translateX(0%); }    /* ปาดมาปิดจอเต็มๆ */
+  60% { transform: translateX(0%); }    /* ค้างแป๊บนึง */
+  100% { transform: translateX(-100%); } /* ปาดออกไปทางซ้าย */
+}
