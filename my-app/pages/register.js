@@ -116,13 +116,13 @@ export default function Register() {
             </div>
           </div>
 
-         <button
-  type="submit"
-  className="btn-luxury-slide w-full py-3 mt-4 tracking-wide"
->
-  {/* ต้องมี span ครอบตัวหนังสือเสมอ */}
-  <span>ลงทะเบียน</span>
-</button>
+          <button
+            type="submit"
+            className="btn-luxury-slide w-full py-3 mt-4 tracking-wide"
+          >
+            {/* ต้องมี span ครอบตัวหนังสือเสมอ */}
+            <span>ลงทะเบียน</span>
+          </button>
         </form>
 
         <div className="mt-8 text-center pt-6 border-t border-slate-700/50">
@@ -136,4 +136,11 @@ export default function Register() {
       </div>
     </div>
   );
+}
+
+// 🔥 FIX: บังคับให้เป็น SSR เพื่อแก้ปัญหา Build Error
+export async function getServerSideProps(context) {
+  return {
+    props: {},
+  };
 }

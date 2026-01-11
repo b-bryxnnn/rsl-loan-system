@@ -137,3 +137,10 @@ export default function ForgotPassword() {
     </div>
   );
 }
+
+// 🔥 FIX: บังคับให้เป็น SSR เพื่อแก้ปัญหา Build Error
+export async function getServerSideProps(context) {
+  return {
+    props: {},
+  };
+}
