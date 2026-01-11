@@ -323,3 +323,9 @@ export default function Home() {
     </div>
   );
 }
+// 🔥 แปะส่วนนี้ไว้บรรทัดสุดท้ายของไฟล์ เพื่อแก้ Error ตอน Build ครับ
+export async function getServerSideProps(context) {
+  return {
+    props: {},
+  };
+}
