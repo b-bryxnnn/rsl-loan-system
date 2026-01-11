@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 import { showLoading, showSuccess, showError, closeAlert } from '../utils/sweetAlert';
-import { FileText, XCircle, CheckCircle, Clock, Settings, LogOut, ArrowLeft } from 'lucide-react';
+import { FileText, XCircle, CheckCircle, Clock, Settings, LogOut, ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbxKYoYSaGP3sEvDwSPM6L2bWxI8BR82_7-IZDn-2soQdJAHdo2iCultXLkjFtTgK52glw/exec";
@@ -18,7 +18,7 @@ export default function AdminDashboard() {
     if (storedUser) {
       const u = JSON.parse(storedUser);
       if (u.role !== 'admin') {
-        router.push('/'); // ถ้าไม่ใช่แอดมิน ดีดกลับหน้าแรก
+        router.push('/');
       } else {
         setUser(u);
         fetchDocuments();
@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getDocuments' }) });
       const result = await res.json();
-      if (result.status === 'success') setDocuments(result.data.reverse()); // โชว์ล่าสุดก่อน
+      if (result.status === 'success') setDocuments(result.data.reverse());
     } catch(e) { console.error(e); }
   };
 
@@ -66,15 +66,48 @@ export default function AdminDashboard() {
       closeAlert();
       if (result.status === 'success') {
         showSuccess('เรียบร้อย', 'ตีกลับเอกสารและแจ้งเตือนนักเรียนแล้ว');
-        fetchDocuments(); // รีเฟรชข้อมูล
+        fetchDocuments();
       } else {
         showError('ผิดพลาด', result.message);
       }
     }
   };
 
+  // 🆕 ฟังก์ชันดาวน์โหลดและเช็คซ้ำ
+  const handleDownload = async (doc) => {
+    // แจ้ง Server ว่าจะโหลดไฟล์นี้
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ 
+          action: 'markAsDownloaded', 
+          adminEmail: user.email, 
+          studentEmail: doc.email,
+          fileName: doc.fileName,
+          fileId: doc.fileId
+        })
+    });
+    const result = await res.json();
+    
+    // ถ้าเคยโหลดแล้ว ให้เตือน
+    if (result.isDuplicate) {
+        const confirm = await Swal.fire({
+          title: 'มีการดาวน์โหลดซ้ำ!',
+          text: `เอกสาร ${doc.fileName} ของ ${doc.fullname} ถูกดาวน์โหลดไปแล้วโดยแอดมิน (อาจเป็นคุณหรือคนอื่น) ต้องการดาวน์โหลดซ้ำหรือไม่?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'ยืนยันโหลดซ้ำ',
+          cancelButtonText: 'ยกเลิก',
+          confirmButtonColor: '#f59e0b',
+          background: '#1e293b', color: '#fff'
+        });
+        if (!confirm.isConfirmed) return;
+    }
+    
+    // เปิดลิงก์ดาวน์โหลด
+    window.open(doc.fileUrl, '_blank');
+  };
+
   const handleSystemSettings = async () => {
-    // ใช้ SweetAlert ให้แอดมินกรอกเวลาเปิด-ปิด (แบบง่ายๆ)
     const { value: formValues } = await Swal.fire({
       title: 'ตั้งค่าเวลาเปิด-ปิดระบบ',
       html:
@@ -106,7 +139,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white font-prompt">
-      {/* Navbar */}
       <nav className="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -129,7 +161,6 @@ export default function AdminDashboard() {
           <button onClick={fetchDocuments} className="text-blue-400 hover:text-blue-300 text-sm">รีเฟรชข้อมูล</button>
         </div>
 
-        {/* ตารางเอกสาร */}
         <div className="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
@@ -144,7 +175,7 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-slate-700">
                 {documents.map((doc, i) => (
-                  <tr key={i} className="hover:bg-slate-700/30 transition-colors">
+                  <tr key={i} className={`hover:bg-slate-700/30 transition-colors ${doc.status === 'Replaced' ? 'opacity-50' : ''}`}>
                     <td className="p-4 whitespace-nowrap">{new Date(doc.timestamp).toLocaleString('th-TH')}</td>
                     <td className="p-4">
                       <div className="font-medium text-white">{doc.fullname}</div>
@@ -158,12 +189,18 @@ export default function AdminDashboard() {
                     <td className="p-4">
                       {doc.status === 'Pending' && <span className="text-yellow-400 flex items-center gap-1"><Clock size={14}/> รอตรวจ</span>}
                       {doc.status === 'Rejected' && <span className="text-red-400 flex items-center gap-1"><XCircle size={14}/> ตีกลับแล้ว</span>}
+                      {doc.status === 'Replaced' && <span className="text-slate-400 flex items-center gap-1"> ถูกแทนที่</span>}
                       {doc.status === 'Approved' && <span className="text-green-400 flex items-center gap-1"><CheckCircle size={14}/> ผ่าน</span>}
                     </td>
                     <td className="p-4 text-center flex justify-center gap-2">
-                      <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs">
-                        เปิดไฟล์
-                      </a>
+                      <button 
+                        onClick={() => handleDownload(doc)} 
+                        className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs flex items-center gap-1"
+                        disabled={doc.status === 'Replaced'}
+                      >
+                        <Download size={14}/> เปิดไฟล์
+                      </button>
+                      
                       {doc.status === 'Pending' && (
                         <button 
                           onClick={() => handleReject(doc)}

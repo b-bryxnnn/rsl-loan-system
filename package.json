@@ -3,6 +3,7 @@
     "axios": "^1.13.2",
     "framer-motion": "^12.25.0",
     "pdfjs-dist": "^5.4.530",
+    "react-google-recaptcha-v3": "^1.11.0",
     "sweetalert2": "^11.26.17"
   }
 }
