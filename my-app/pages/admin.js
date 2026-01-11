@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 import { showLoading, showSuccess, showError, closeAlert } from '../utils/sweetAlert';
-import { FileText, XCircle, CheckCircle, Clock, Settings, LogOut, ArrowLeft, Download } from 'lucide-react';
+import { FileText, XCircle, CheckCircle, Clock, Settings, ArrowLeft, Download, ExternalLink, Power } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbxKYoYSaGP3sEvDwSPM6L2bWxI8BR82_7-IZDn-2soQdJAHdo2iCultXLkjFtTgK52glw/exec";
@@ -11,22 +11,14 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [systemStatus, setSystemStatus] = useState({ isOpen: true, start: '', end: '' });
+  const [systemStatus, setSystemStatus] = useState({ isOpen: true, start: '', end: '', manualStatus: 'OPEN' });
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
       const u = JSON.parse(storedUser);
-      if (u.role !== 'admin') {
-        router.push('/');
-      } else {
-        setUser(u);
-        fetchDocuments();
-        fetchSystemStatus();
-      }
-    } else {
-      router.push('/login');
-    }
+      if (u.role !== 'admin') { router.push('/'); } else { setUser(u); fetchDocuments(); fetchSystemStatus(); }
+    } else { router.push('/login'); }
   }, []);
 
   const fetchDocuments = async () => {
@@ -45,6 +37,34 @@ export default function AdminDashboard() {
     } catch(e) {}
   };
 
+  // 🆕 ปุ่มสวิตช์เปิด-ปิดระบบทันที
+  const handleToggleSystem = async () => {
+    const isCurrentlyClosed = systemStatus.manualStatus === 'CLOSED';
+    const actionText = isCurrentlyClosed ? 'เปิดระบบ' : 'ปิดระบบ';
+    
+    const { isConfirmed } = await Swal.fire({
+      title: `ยืนยัน${actionText}ทันที?`,
+      text: isCurrentlyClosed ? 'นักเรียนจะสามารถส่งเอกสารได้ทันที' : 'นักเรียนจะไม่สามารถส่งเอกสารได้ จนกว่าคุณจะเปิดใหม่',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `ใช่, ${actionText}เลย`,
+      confirmButtonColor: isCurrentlyClosed ? '#22c55e' : '#ef4444',
+      cancelButtonText: 'ยกเลิก',
+      background: '#1e293b', color: '#fff'
+    });
+
+    if (isConfirmed) {
+      showLoading('กำลังบันทึก...');
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'toggleSystem', status: isCurrentlyClosed ? 'OPEN' : 'CLOSED' })
+      });
+      closeAlert();
+      fetchSystemStatus();
+      showSuccess('เรียบร้อย', `ระบบถูก${actionText}แล้ว`);
+    }
+  };
+
   const handleReject = async (doc) => {
     const { value: reason } = await Swal.fire({
       title: 'ระบุเหตุผลที่ตีกลับ',
@@ -55,7 +75,6 @@ export default function AdminDashboard() {
       confirmButtonColor: '#ef4444',
       background: '#1e293b', color: '#fff'
     });
-
     if (reason) {
       showLoading('กำลังตีกลับเอกสาร...');
       const res = await fetch(API_URL, {
@@ -64,19 +83,41 @@ export default function AdminDashboard() {
       });
       const result = await res.json();
       closeAlert();
-      if (result.status === 'success') {
-        showSuccess('เรียบร้อย', 'ตีกลับเอกสารและแจ้งเตือนนักเรียนแล้ว');
-        fetchDocuments();
-      } else {
-        showError('ผิดพลาด', result.message);
-      }
+      if (result.status === 'success') { showSuccess('เรียบร้อย', 'ตีกลับเอกสารแล้ว'); fetchDocuments(); } 
+      else { showError('ผิดพลาด', result.message); }
     }
   };
 
-  // 🆕 ฟังก์ชันดาวน์โหลดและเช็คซ้ำ
-  const handleDownload = async (doc) => {
-    // แจ้ง Server ว่าจะโหลดไฟล์นี้
-    const res = await fetch(API_URL, {
+  // 🆕 ฟังก์ชันอนุมัติเอกสาร (ถูกต้อง)
+  const handleApprove = async (doc) => {
+    const { isConfirmed } = await Swal.fire({
+        title: 'ยืนยันความถูกต้อง?',
+        text: `คุณตรวจสอบแล้วว่าเอกสาร ${doc.docType} ของ ${doc.fullname} ถูกต้องครบถ้วน?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ถูกต้อง (อนุมัติ)',
+        confirmButtonColor: '#22c55e',
+        cancelButtonText: 'ยกเลิก',
+        background: '#1e293b', color: '#fff'
+    });
+
+    if (isConfirmed) {
+        showLoading('กำลังบันทึก...');
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'approveDocument', email: doc.email, docType: doc.docType })
+        });
+        const result = await res.json();
+        closeAlert();
+        if (result.status === 'success') { showSuccess('อนุมัติแล้ว', 'สถานะเอกสารเปลี่ยนเป็น "ผ่าน"'); fetchDocuments(); }
+        else { showError('ผิดพลาด', result.message); }
+    }
+  };
+
+  // 🆕 แก้ไข: เปิดไฟล์เฉยๆ (ไม่เน้นดาวน์โหลด)
+  const handleOpenFile = async (doc) => {
+    // ยังคง Log การเปิดไฟล์เหมือนเดิม แต่เปลี่ยน UI ให้เป็นแค่ "เปิดดู"
+    fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({ 
           action: 'markAsDownloaded', 
@@ -86,51 +127,22 @@ export default function AdminDashboard() {
           fileId: doc.fileId
         })
     });
-    const result = await res.json();
-    
-    // ถ้าเคยโหลดแล้ว ให้เตือน
-    if (result.isDuplicate) {
-        const confirm = await Swal.fire({
-          title: 'มีการดาวน์โหลดซ้ำ!',
-          text: `เอกสาร ${doc.fileName} ของ ${doc.fullname} ถูกดาวน์โหลดไปแล้วโดยแอดมิน (อาจเป็นคุณหรือคนอื่น) ต้องการดาวน์โหลดซ้ำหรือไม่?`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'ยืนยันโหลดซ้ำ',
-          cancelButtonText: 'ยกเลิก',
-          confirmButtonColor: '#f59e0b',
-          background: '#1e293b', color: '#fff'
-        });
-        if (!confirm.isConfirmed) return;
-    }
-    
-    // เปิดลิงก์ดาวน์โหลด
     window.open(doc.fileUrl, '_blank');
   };
 
   const handleSystemSettings = async () => {
     const { value: formValues } = await Swal.fire({
-      title: 'ตั้งค่าเวลาเปิด-ปิดระบบ',
-      html:
-        '<label>เวลาเปิด:</label><input id="swal-start" type="datetime-local" class="swal2-input">' +
-        '<label>เวลาปิด:</label><input id="swal-end" type="datetime-local" class="swal2-input">',
+      title: 'ตั้งค่าเวลาเปิด-ปิดอัตโนมัติ',
+      html: '<label>เวลาเปิด:</label><input id="swal-start" type="datetime-local" class="swal2-input">' +
+            '<label>เวลาปิด:</label><input id="swal-end" type="datetime-local" class="swal2-input">',
       focusConfirm: false,
       background: '#1e293b', color: '#fff',
-      preConfirm: () => {
-        return [
-          document.getElementById('swal-start').value,
-          document.getElementById('swal-end').value
-        ]
-      }
+      preConfirm: () => [document.getElementById('swal-start').value, document.getElementById('swal-end').value]
     });
-
     if (formValues) {
       showLoading('กำลังบันทึก...');
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'updateSystemSettings', start: formValues[0], end: formValues[1] })
-      });
+      await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateSystemSettings', start: formValues[0], end: formValues[1] }) });
       closeAlert();
-      showSuccess('บันทึกสำเร็จ', 'อัปเดตเวลาทำการเรียบร้อย');
       fetchSystemStatus();
     }
   };
@@ -146,11 +158,21 @@ export default function AdminDashboard() {
             <h1 className="text-lg font-bold text-yellow-400">Admin Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 text-sm px-3 py-1 rounded-full ${systemStatus.isOpen ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-              <Clock size={14} />
-              {systemStatus.isOpen ? 'ระบบเปิดใช้งาน' : 'ระบบปิดอยู่'}
-            </div>
-            <button onClick={handleSystemSettings} className="p-2 hover:bg-slate-700 rounded-full"><Settings size={20} /></button>
+            
+            {/* 🆕 ปุ่มสวิตช์เปิด-ปิดระบบทันที */}
+            <button 
+                onClick={handleToggleSystem}
+                className={`flex items-center gap-2 text-sm px-4 py-2 rounded-full font-bold transition-all border ${
+                    systemStatus.isOpen 
+                    ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
+                    : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'
+                }`}
+            >
+                <Power size={16} />
+                {systemStatus.isOpen ? 'ระบบเปิดอยู่' : 'ระบบปิดอยู่'}
+            </button>
+
+            <button onClick={handleSystemSettings} className="p-2 hover:bg-slate-700 rounded-full text-slate-400"><Settings size={20} /></button>
           </div>
         </div>
       </nav>
@@ -168,7 +190,7 @@ export default function AdminDashboard() {
                 <tr>
                   <th className="p-4">วันที่ส่ง</th>
                   <th className="p-4">นักเรียน</th>
-                  <th className="p-4">ประเภท</th>
+                  <th className="p-4">เอกสาร</th>
                   <th className="p-4">สถานะ</th>
                   <th className="p-4 text-center">จัดการ</th>
                 </tr>
@@ -193,30 +215,37 @@ export default function AdminDashboard() {
                       {doc.status === 'Approved' && <span className="text-green-400 flex items-center gap-1"><CheckCircle size={14}/> ผ่าน</span>}
                     </td>
                     <td className="p-4 text-center flex justify-center gap-2">
+                      {/* 🆕 ปุ่มเปิดไฟล์ (ไม่มีคำว่าโหลด) */}
                       <button 
-                        onClick={() => handleDownload(doc)} 
+                        onClick={() => handleOpenFile(doc)} 
                         className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs flex items-center gap-1"
                         disabled={doc.status === 'Replaced'}
                       >
-                        <Download size={14}/> เปิดไฟล์
+                        <ExternalLink size={14}/> เปิดไฟล์
                       </button>
                       
                       {doc.status === 'Pending' && (
-                        <button 
-                          onClick={() => handleReject(doc)}
-                          className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded text-xs"
-                        >
-                          ตีกลับ
-                        </button>
+                        <>
+                            {/* 🆕 ปุ่มอนุมัติ (ถูกต้อง) */}
+                            <button 
+                                onClick={() => handleApprove(doc)}
+                                className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded text-xs flex items-center gap-1"
+                            >
+                                <CheckCircle size={14} /> ถูกต้อง
+                            </button>
+
+                            {/* ปุ่มตีกลับ */}
+                            <button 
+                                onClick={() => handleReject(doc)}
+                                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded text-xs"
+                            >
+                                ตีกลับ
+                            </button>
+                        </>
                       )}
                     </td>
                   </tr>
                 ))}
-                {documents.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="p-8 text-center text-slate-500">ยังไม่มีเอกสารส่งเข้ามา</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -225,10 +254,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-// 🔥 ส่วนสำคัญ: เพิ่มฟังก์ชันนี้ที่ล่างสุดของไฟล์ เพื่อบังคับให้หน้านี้ข้ามการ Prerender (แก้ Build Error)
-export async function getServerSideProps(context) {
-  return {
-    props: {}, 
-  };
-}
+export async function getServerSideProps(context) { return { props: {}, }; }

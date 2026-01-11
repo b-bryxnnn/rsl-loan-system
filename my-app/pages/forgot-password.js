@@ -39,7 +39,16 @@ export default function ForgotPassword() {
       const result = await res.json();
       closeAlert();
       if(result.status === 'success') {
-        await Swal.fire({ title: 'สำเร็จ!', text: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', icon: 'success', confirmButtonText: 'ไปหน้าเข้าสู่ระบบ', confirmButtonColor: '#2563eb'});
+        await Swal.fire({
+            title: 'เปลี่ยนรหัสผ่านสำเร็จ!',
+            text: 'กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่',
+            icon: 'success',
+            confirmButtonText: 'ไปหน้าเข้าสู่ระบบ',
+            confirmButtonColor: '#2563eb',
+            background: '#1e293b',
+            color: '#fff',
+            customClass: { popup: 'border border-slate-700 shadow-2xl rounded-2xl' }
+        });
         router.push('/login');
       } else { showError('ผิดพลาด', result.message); }
     } catch(err) { showError('System Error', err.message); }
@@ -63,7 +72,6 @@ export default function ForgotPassword() {
                 <input type="email" required className="bg-transparent w-full p-3 text-white outline-none placeholder-slate-600" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             </div>
-            {/* 🔥 ใช้ class btn-luxury-slide */}
             <button className="btn-luxury-slide w-full py-3 flex justify-center items-center gap-2 shadow-lg shadow-blue-500/30">
               <span>ส่งรหัส OTP</span> <ArrowRight size={18}/>
             </button>
@@ -87,12 +95,12 @@ export default function ForgotPassword() {
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-slate-400 hover:text-white"><Eye size={18} /></button>
               </div>
             </div>
-            {/* 🔥 ใช้ class btn-luxury-slide */}
             <button className="btn-luxury-slide w-full py-3 shadow-lg shadow-blue-500/30">
               <span>ยืนยันการเปลี่ยนรหัส</span>
             </button>
           </form>
         )}
+        
         <div className="text-center mt-6 pt-4 border-t border-slate-700">
            <Link href="/login" className="text-slate-400 hover:text-white text-sm transition-colors">กลับไปหน้าเข้าสู่ระบบ</Link>
         </div>
@@ -100,4 +108,6 @@ export default function ForgotPassword() {
     </div>
   );
 }
+
+// 🔥 FIX SSR
 export async function getServerSideProps(context) { return { props: {}, }; }
