@@ -1,14 +1,11 @@
-// ⚠️ ลบ import ด้านบนออกให้หมด เพื่อป้องกัน Server รันแล้วพัง
-// เราจะย้ายไป import ข้างในฟังก์ชันแทนครับ
-
 export const scanBarcodesInPdf = async (file, pagesToCheck) => {
-  // 1. Dynamic Import: โหลด Library เฉพาะตอนเรียกใช้ฟังก์ชัน (Client-side Only)
+  // 1. Dynamic Import
   const pdfjsLib = await import('pdfjs-dist/build/pdf');
   const { BrowserMultiFormatReader, NotFoundException } = await import('@zxing/library');
 
-  // 2. ตั้งค่า Worker (ต้องทำหลังจาก import เสร็จ)
-  // ใช้ Worker ผ่าน CDN เพื่อลดปัญหาการตั้งค่า Webpack/Turbopack
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  // ⚠️ 2. ตั้งค่า Worker (แก้ใหม่: ใช้ unpkg และระบุ .mjs เพื่อรองรับเวอร์ชันใหม่)
+  // ใช้ unpkg แทน cdnjs เพราะอัปเดตไวกว่าและรองรับ Module (.mjs)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
   // --- เริ่มกระบวนการอ่านไฟล์ ---
   const fileURL = URL.createObjectURL(file);
@@ -34,7 +31,6 @@ export const scanBarcodesInPdf = async (file, pagesToCheck) => {
 
       // สแกนบาร์โค้ดจาก Canvas
       try {
-        // ใช้ codeReader ที่ import มาแบบ dynamic
         const result = await codeReader.decodeFromCanvas(canvas);
         results.push({ page: i, status: 'found', text: result.getText() });
       } catch (err) {
