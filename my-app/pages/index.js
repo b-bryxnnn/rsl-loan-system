@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3"; // 🆕 Import
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { showLoading, showSuccess, showError, closeAlert } from '../utils/sweetAlert';
 import { scanBarcodesInPdf } from '../utils/pdfScanner';
 import { Hourglass, UploadCloud, FileText, CheckCircle, AlertTriangle, LogIn, UserPlus, ShieldCheck, Eye } from 'lucide-react';
@@ -12,7 +12,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxKYoYSaGP3sEvDwSPM6L2b
 
 export default function Home() {
   const router = useRouter();
-  const { executeRecaptcha } = useGoogleReCaptcha(); // 🆕 Hook
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [user, setUser] = useState(null);
   const [myDocs, setMyDocs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,22 +29,15 @@ export default function Home() {
         const u = JSON.parse(storedUser);
         setUser(u);
         fetchUserDocs(u.email);
-      } catch (error) {
-        localStorage.removeItem('user_data');
-      }
+      } catch (error) { localStorage.removeItem('user_data'); }
     }
   }, []);
 
   const fetchUserDocs = async (email) => {
     try {
-      const res = await fetch(API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ action: 'getUserDocuments', email }) 
-      });
+      const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getUserDocuments', email }) });
       const result = await res.json();
-      if(result.status === 'success') {
-        setMyDocs(result.data);
-      }
+      if(result.status === 'success') setMyDocs(result.data);
     } catch(e) { console.error(e); }
   };
 
@@ -67,20 +60,13 @@ export default function Home() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 🆕 ตรวจสอบว่า reCAPTCHA พร้อมใช้งานไหม
     if (!executeRecaptcha) {
       showError('ระบบตรวจสอบบอทยังไม่พร้อม', 'กรุณารีเฟรชหน้าเว็บแล้วลองใหม่');
       return;
     }
 
-    if (file.type !== 'application/pdf') {
-      showError('ไฟล์ผิดประเภท', 'กรุณาอัปโหลดไฟล์ PDF เท่านั้น');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) { 
-      showError('ไฟล์ใหญ่เกินไป', 'ขนาดไฟล์ต้องไม่เกิน 10 MB');
-      return;
-    }
+    if (file.type !== 'application/pdf') { showError('ไฟล์ผิดประเภท', 'กรุณาอัปโหลดไฟล์ PDF เท่านั้น'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('ไฟล์ใหญ่เกินไป', 'ขนาดไฟล์ต้องไม่เกิน 10 MB'); return; }
 
     setLoading(true);
     setLoadingMsg('กำลังตรวจสอบไฟล์...');
@@ -113,15 +99,12 @@ export default function Home() {
       }
 
       setLoadingMsg('ตรวจสอบผ่านแล้ว! กำลังส่งข้อมูล...');
-      
-      // 🆕 สร้าง Token v3
       const token = await executeRecaptcha("uploadFile");
 
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = async () => {
         const base64 = reader.result.split(',')[1];
-        
         const payload = {
           action: 'uploadFile',
           email: user.email,
@@ -130,13 +113,10 @@ export default function Home() {
           fileName: file.name,
           docType: isContract ? 'สัญญากู้ยืม' : 'แบบยืนยัน',
           isCorrection: uploadType === 'correction',
-          captchaToken: token // 🆕 ส่ง Token ไปหลังบ้าน
+          captchaToken: token
         };
 
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
         const result = await res.json();
         
         setLoading(false);
@@ -149,28 +129,19 @@ export default function Home() {
           showError('เกิดข้อผิดพลาด', result.message);
         }
       };
-
     } catch (error) {
       setLoading(false);
       if (scanFailedCount >= 0) {
-         Swal.fire({
-           title: 'สแกนบาร์โค้ดไม่ผ่าน',
-           html: `<p class="text-red-400 mb-2">${error.message}</p>
-                  <p class="text-sm text-slate-300">หากมั่นใจว่าไฟล์ถูกต้อง สามารถข้ามการตรวจได้</p>`,
-           icon: 'warning',
-           background: '#1e293b',
-           color: '#fff',
-           showCancelButton: true,
-           confirmButtonText: 'ยืนยันส่ง (ข้ามการตรวจ)',
-           confirmButtonColor: '#eab308',
-           cancelButtonText: 'ยกเลิก',
-         }).then((res) => {
-           if(res.isConfirmed) {
-             handleFileUpload(e, true); 
-           } else {
-             e.target.value = '';
-           }
-         });
+          Swal.fire({
+            title: 'สแกนบาร์โค้ดไม่ผ่าน',
+            html: `<p class="text-red-400 mb-2">${error.message}</p><p class="text-sm text-slate-300">หากมั่นใจว่าไฟล์ถูกต้อง สามารถข้ามการตรวจได้</p>`,
+            icon: 'warning',
+            background: '#1e293b', color: '#fff',
+            showCancelButton: true, confirmButtonText: 'ยืนยันส่ง (ข้ามการตรวจ)', confirmButtonColor: '#eab308', cancelButtonText: 'ยกเลิก',
+          }).then((res) => {
+            if(res.isConfirmed) handleFileUpload(e, true); 
+            else e.target.value = '';
+          });
       } else {
          showError('เอกสารมีปัญหา', error.message);
       }
@@ -188,14 +159,12 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full">
             <Link href="/login" className="w-full sm:w-auto">
               <button className="btn-luxury-slide w-full sm:w-48 py-4 px-6 flex items-center justify-center gap-2 group">
-                <LogIn size={20} className="group-hover:translate-x-1 transition-transform" />
-                <span>เข้าสู่ระบบ</span>
+                <LogIn size={20} className="group-hover:translate-x-1 transition-transform" /> <span>เข้าสู่ระบบ</span>
               </button>
             </Link>
             <Link href="/register" className="w-full sm:w-auto">
               <button className="bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-white w-full sm:w-48 py-4 px-6 rounded-lg backdrop-blur-md flex items-center justify-center gap-2 transition-all hover:scale-105">
-                <UserPlus size={20} />
-                <span>สมัครสมาชิก</span>
+                <UserPlus size={20} /> <span>สมัครสมาชิก</span>
               </button>
             </Link>
           </div>
@@ -212,20 +181,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
              <img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/RSL001.png" className="w-10 h-10" />
-             <div>
-               <h1 className="text-sm font-semibold text-blue-100">ระบบส่งเอกสาร กยศ.</h1>
-               <p className="text-xs text-slate-400">โรงเรียนรัตนโกสินทร์สมโภชลาดกระบัง</p>
-             </div>
+             <div><h1 className="text-sm font-semibold text-blue-100">ระบบส่งเอกสาร กยศ.</h1><p className="text-xs text-slate-400">โรงเรียนรัตนโกสินทร์สมโภชลาดกระบัง</p></div>
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-300 hidden md:block">ผู้ใช้: {user.fullname}</span>
             {user.role === 'admin' && (
-              <Link href="/admin">
-                <button className="flex items-center gap-2 bg-yellow-500/10 text-yellow-400 text-sm hover:bg-yellow-500/20 px-3 py-1 rounded-full border border-yellow-500/20 transition-all">
-                  <ShieldCheck size={16} />
-                  <span className="hidden md:inline">เจ้าหน้าที่</span>
-                </button>
-              </Link>
+              <Link href="/admin"><button className="flex items-center gap-2 bg-yellow-500/10 text-yellow-400 text-sm hover:bg-yellow-500/20 px-3 py-1 rounded-full border border-yellow-500/20 transition-all"><ShieldCheck size={16} /><span className="hidden md:inline">เจ้าหน้าที่</span></button></Link>
             )}
             <button onClick={logout} className="text-red-400 text-sm hover:text-red-300 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 transition-all hover:bg-red-500/20">ออกจากระบบ</button>
           </div>
@@ -254,12 +215,7 @@ export default function Home() {
                       <p className="text-xs text-slate-500 mt-1">ส่งเมื่อ: {new Date(doc.timestamp).toLocaleString('th-TH')}</p>
                       {doc.status === 'Rejected' && <p className="text-xs text-red-300 mt-1 bg-red-500/10 p-1 rounded inline-block border border-red-500/20">❌ เหตุผล: {doc.reason}</p>}
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                      doc.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                      doc.status === 'Approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                      doc.status === 'Replaced' ? 'bg-slate-700/50 text-slate-400 border-slate-600' :
-                      'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold border ${doc.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : doc.status === 'Approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : doc.status === 'Replaced' ? 'bg-slate-700/50 text-slate-400 border-slate-600' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                       {doc.status === 'Pending' ? 'รอตรวจสอบ' : doc.status === 'Approved' ? 'ผ่านแล้ว' : doc.status === 'Replaced' ? 'ถูกแทนที่' : 'ต้องแก้ไข'}
                     </div>
                  </div>
@@ -279,24 +235,27 @@ export default function Home() {
             <h3 className="text-lg font-medium text-white">2. แบบยืนยันการกู้ยืม</h3>
             <p className="text-xs text-indigo-200 mt-2 opacity-80">ไฟล์ Rxxx... (3 หน้า+)</p>
           </button>
+          {/* 🔥 แก้ไขเมนูที่ 3 ตามที่ขอ */}
           <button onClick={() => setUploadType('correction')} className={`p-6 rounded-2xl border transition-all transform hover:-translate-y-1 ${uploadType === 'correction' ? 'bg-orange-600 border-orange-400 shadow-[0_0_20px_rgba(234,88,12,0.4)]' : 'bg-slate-800 border-slate-700 hover:bg-slate-700'}`}>
             <AlertTriangle size={32} className="mb-4 mx-auto text-white" />
             <h3 className="text-lg font-medium text-white">3. ส่งเอกสารแก้ไข</h3>
-            <p className="text-xs text-orange-200 mt-2 opacity-80">เฉพาะที่ถูกตีกลับ</p>
+            <p className="text-xs text-orange-200 mt-2 opacity-80 leading-tight">กรณีถูกตีกลับจาก<br/>Line/Email เจ้าหน้าที่</p>
           </button>
         </div>
 
         <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm animate-fade-in-up">
            {uploadType === 'correction' && (
               <div className="mb-6 w-full max-w-lg mx-auto text-center">
-                 <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-6 text-sm text-red-200 text-left">
-                    <div className="flex items-center gap-2 mb-2 font-bold text-red-400">
+                 {/* 🔥 กล่องแจ้งเตือนสำคัญ */}
+                 <div className="bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl mb-6 text-sm text-orange-200 text-left">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-orange-400">
                         <AlertTriangle size={18} />
-                        <span>คำเตือนสำคัญ</span>
+                        <span>เงื่อนไขการส่งแก้ไข</span>
                     </div>
-                    <ul className="list-disc list-inside space-y-1 opacity-90">
-                        <li>ใช้เมนูนี้เฉพาะ <b>เอกสารที่ถูกตีกลับ</b> (สถานะสีแดง) เท่านั้น</li>
-                        <li>หากส่งเข้ามา ระบบจะไปเปลี่ยนสถานะเอกสารเก่าให้เป็น "ถูกแทนที่" อัตโนมัติ</li>
+                    <ul className="list-disc list-inside space-y-1 opacity-90 text-xs">
+                        <li>ใช้สำหรับเอกสารที่ <b>ถูกตีกลับ</b> และได้รับแจ้งผ่าน Line หรือ Email เท่านั้น</li>
+                        <li>รวมถึงกรณีที่เจ้าหน้าที่ (กยศ.ส่วนกลาง) แจ้งให้แก้ไขข้อมูล</li>
+                        <li>ระบบจะเปลี่ยนสถานะเอกสารชุดเก่าเป็น "ถูกแทนที่" ทันที</li>
                     </ul>
                  </div>
                 <label className="text-sm text-slate-300 mb-2 block text-left">เลือกประเภทเอกสารที่แก้ไข:</label>
@@ -323,9 +282,6 @@ export default function Home() {
     </div>
   );
 }
-// 🔥 แปะส่วนนี้ไว้บรรทัดสุดท้ายของไฟล์ เพื่อแก้ Error ตอน Build ครับ
-export async function getServerSideProps(context) {
-  return {
-    props: {},
-  };
-}
+
+// 🔥 FIX SSR
+export async function getServerSideProps(context) { return { props: {}, }; }
